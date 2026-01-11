@@ -1,7 +1,7 @@
 {
   "name": "expo-vlc-combo-player",
   "version": "0.1.0",
-  "description": "Expo VLC Combo player contains both expo video  but having vlc as back player for some video codecs with custom media controls",
+  "description": "Expo VLC Combo player - combines expo-video with VLC player backend for enhanced codec support. Features custom native-like media controls with seeking, speed control, AirPlay, and fullscreen animations.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -19,9 +19,22 @@
     "react-native",
     "expo",
     "expo-vlc-combo-player",
-    "ExpoVlcComboPlayer"
+    "ExpoVlcComboPlayer",
+    "video-player",
+    "vlc",
+    "media-player",
+    "streaming",
+    "hls",
+    "rtsp",
+    "mkv",
+    "media-controls",
+    "fullscreen",
+    "airplay"
   ],
-  "repository": "https://github.com/lakhvirk/expo-vlc-combo-player",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lakhvirk/expo-vlc-combo-player.git"
+  },
   "bugs": {
     "url": "https://github.com/lakhvirk/expo-vlc-combo-player/issues"
   },
@@ -39,5 +52,29 @@
     "expo": "*",
     "react": "*",
     "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-video": {
+      "optional": true
+    },
+    "react-native-vlc-media-player": {
+      "optional": true
+    },
+    "expo-screen-orientation": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {},
+  "engines": {
+    "node": ">=18"
+  },
+  "expo": {
+    "autolinking": {
+      "nativeModules": {
+        "ios": {
+          "podName": "ExpoVlcComboPlayer"
+        }
+      }
+    }
   }
 }
