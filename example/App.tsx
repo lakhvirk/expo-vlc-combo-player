@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -41,8 +40,6 @@ const SAMPLE_VIDEOS = [
     type: "mp4" as const,
   },
 ];
-
-const { width: screenWidth } = Dimensions.get("window");
 
 export default function App() {
   const playerRef = useRef<ExpoVlcComboPlayerRef>(null);
