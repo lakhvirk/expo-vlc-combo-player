@@ -19,16 +19,16 @@ export function useFullscreen(options: UseFullscreenOptions = {}) {
   } = options;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [originalOrientation, setOriginalOrientation] = useState<number | null>(null);
+  const [originalOrientationLock, setOriginalOrientationLock] = useState<number | null>(null);
 
   // Lock orientation on enter
   const lockOrientation = useCallback(async () => {
     if (!ScreenOrientation || !autoRotate) return;
 
     try {
-      // Save original orientation
-      const current = await ScreenOrientation.getOrientationAsync();
-      setOriginalOrientation(current);
+      // Save original orientation lock setting (not current orientation)
+      const currentLock = await ScreenOrientation.getOrientationLockAsync();
+      setOriginalOrientationLock(currentLock);
 
       // Lock to desired orientation
       switch (orientation) {
@@ -52,19 +52,29 @@ export function useFullscreen(options: UseFullscreenOptions = {}) {
     }
   }, [orientation, autoRotate]);
 
-  // Unlock orientation on exit
-  const unlockOrientation = useCallback(async () => {
+  // Restore orientation on exit
+  const restoreOrientation = useCallback(async () => {
     if (!ScreenOrientation || !autoRotate) return;
 
     try {
-      // Restore original orientation or unlock
-      if (originalOrientation !== null) {
-        await ScreenOrientation.unlockAsync();
+      // Restore the original orientation lock setting
+      if (originalOrientationLock !== null) {
+        // OrientationLock enum values: DEFAULT=0, ALL=1, PORTRAIT=2, etc.
+        // If it was DEFAULT (0) or ALL (1), unlock; otherwise restore the lock
+        if (
+          originalOrientationLock === ScreenOrientation.OrientationLock.DEFAULT ||
+          originalOrientationLock === ScreenOrientation.OrientationLock.ALL
+        ) {
+          await ScreenOrientation.unlockAsync();
+        } else {
+          await ScreenOrientation.lockAsync(originalOrientationLock);
+        }
+        setOriginalOrientationLock(null);
       }
     } catch (error) {
-      console.warn('Failed to unlock orientation:', error);
+      console.warn('Failed to restore orientation:', error);
     }
-  }, [originalOrientation, autoRotate]);
+  }, [originalOrientationLock, autoRotate]);
 
   // Enter fullscreen
   const enterFullscreen = useCallback(async () => {
@@ -90,11 +100,11 @@ export function useFullscreen(options: UseFullscreenOptions = {}) {
       StatusBar.setHidden(false, 'fade');
     }
 
-    // Unlock orientation
-    await unlockOrientation();
+    // Restore original orientation lock
+    await restoreOrientation();
 
     onExit?.();
-  }, [unlockOrientation, onExit]);
+  }, [restoreOrientation, onExit]);
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(async () => {

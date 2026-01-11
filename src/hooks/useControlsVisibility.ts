@@ -10,15 +10,28 @@ export function useControlsVisibility(options: UsePlayerControlsOptions = {}) {
   const [isVisible, setIsVisible] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(false);
 
-  // Clear timeout on unmount
+  // Schedule auto-hide on mount and cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
+
+    // Schedule auto-hide on mount if controls are visible and autoHide is enabled
+    if (autoHide && isVisible && !isLocked) {
+      hideTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setIsVisible(false);
+        }
+      }, autoHideDelay);
+    }
+
     return () => {
+      isMountedRef.current = false;
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
       }
     };
-  }, []);
+  }, []); // Only run on mount/unmount
 
   // Schedule auto-hide
   const scheduleHide = useCallback(() => {
@@ -29,7 +42,9 @@ export function useControlsVisibility(options: UsePlayerControlsOptions = {}) {
     }
 
     hideTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false);
+      if (isMountedRef.current) {
+        setIsVisible(false);
+      }
     }, autoHideDelay);
   }, [autoHide, autoHideDelay, isLocked]);
 
