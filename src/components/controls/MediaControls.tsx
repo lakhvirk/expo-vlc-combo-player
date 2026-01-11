@@ -5,10 +5,18 @@ import {
   StyleSheet,
   Animated,
   TouchableWithoutFeedback,
-  SafeAreaView,
   StatusBar,
   Platform,
 } from 'react-native';
+
+// Try to import SafeAreaView from react-native-safe-area-context, fallback to View
+let SafeAreaView: React.ComponentType<any> = View;
+try {
+  const safeAreaContext = require('react-native-safe-area-context');
+  SafeAreaView = safeAreaContext.SafeAreaView;
+} catch {
+  // Fallback to View if not available
+}
 import { PlayPauseButton } from './PlayPauseButton';
 import { SeekButton } from './SeekButton';
 import { ProgressBar } from './ProgressBar';

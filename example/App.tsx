@@ -1,15 +1,14 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   Text,
   View,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
   Platform,
 } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   VLCComboPlayer,
   type ExpoVlcComboPlayerRef,
@@ -17,9 +16,6 @@ import {
   type OnLoadEventPayload,
   type OnProgressEventPayload,
   type OnPlaybackStateChangeEventPayload,
-  usePlayerState,
-  PlayPauseButton,
-  SeekButton,
   ProgressBar,
   InlineSpeedSelector,
   TimeDisplay,
@@ -127,10 +123,11 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      <ScrollView
+        <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
@@ -378,8 +375,9 @@ export default function App() {
             expo-vlc-combo-player v0.1.0
           </Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

@@ -35,6 +35,9 @@ npm install react-native-vlc-media-player
 
 # For screen orientation control in fullscreen
 npx expo install expo-screen-orientation
+
+# For safe area support in controls (recommended)
+npx expo install react-native-safe-area-context
 ```
 
 ## Quick Start

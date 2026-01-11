@@ -47,6 +47,3 @@ export * from './ExpoVlcComboPlayer.types';
 
 // Utils
 export { formatTime, parseTime, calculateProgress, formatSpeed } from './utils';
-
-// Native Module (for advanced use cases)
-export { default as ExpoVlcComboPlayerModule } from './ExpoVlcComboPlayerModule';
