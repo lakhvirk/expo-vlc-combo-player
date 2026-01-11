@@ -37,14 +37,198 @@ import {
 // Lazy import expo-video (it might not be installed)
 let useVideoPlayer: typeof import('expo-video').useVideoPlayer | null = null;
 let VideoView: typeof import('expo-video').VideoView | null = null;
+let VideoContentFit: any = null;
 
 try {
   const expoVideo = require('expo-video');
   useVideoPlayer = expoVideo.useVideoPlayer;
   VideoView = expoVideo.VideoView;
+  VideoContentFit = expoVideo.VideoContentFit;
 } catch {
   // expo-video not available
 }
+
+// Expo Video Player sub-component (hooks must be called at top level)
+interface ExpoVideoPlayerProps {
+  source: { uri: string; headers?: Record<string, string> };
+  style?: any;
+  resizeMode?: string;
+  autoPlay?: boolean;
+  loop?: boolean;
+  muted?: boolean;
+  volume?: number;
+  playbackSpeed?: number;
+  isPlaying?: boolean;
+  onLoad?: (data: { duration: number; naturalSize: { width: number; height: number } }) => void;
+  onProgress?: (data: { currentTime: number; duration: number; bufferedTime: number }) => void;
+  onEnd?: () => void;
+  onError?: (error: any) => void;
+  onPlayingChange?: (isPlaying: boolean) => void;
+  playerRef?: React.MutableRefObject<any>;
+}
+
+// Inner component that uses the hook (only rendered when expo-video is available)
+const ExpoVideoPlayerInner: React.FC<ExpoVideoPlayerProps> = ({
+  source,
+  style,
+  resizeMode = 'contain',
+  autoPlay = false,
+  loop = false,
+  muted = false,
+  volume = 1,
+  playbackSpeed = 1,
+  isPlaying = false,
+  onLoad,
+  onProgress,
+  onEnd,
+  onError,
+  onPlayingChange,
+  playerRef,
+}) => {
+  // Create the video player using the hook
+  // Note: useVideoPlayer is guaranteed to exist when this component renders
+  const player = useVideoPlayer!(source.uri, (p) => {
+    p.loop = loop;
+    p.muted = muted;
+    p.volume = volume;
+    p.playbackRate = playbackSpeed;
+    if (autoPlay) {
+      p.play();
+    }
+  });
+
+  // Store player reference for external control
+  useEffect(() => {
+    if (playerRef) {
+      playerRef.current = player;
+    }
+  }, [player, playerRef]);
+
+  // Sync isPlaying state with player
+  useEffect(() => {
+    if (player) {
+      if (isPlaying && !player.playing) {
+        player.play();
+      } else if (!isPlaying && player.playing) {
+        player.pause();
+      }
+    }
+  }, [isPlaying, player]);
+
+  // Sync muted state
+  useEffect(() => {
+    if (player) {
+      player.muted = muted;
+    }
+  }, [muted, player]);
+
+  // Sync volume
+  useEffect(() => {
+    if (player) {
+      player.volume = volume;
+    }
+  }, [volume, player]);
+
+  // Sync playback speed
+  useEffect(() => {
+    if (player) {
+      player.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed, player]);
+
+  // Sync loop
+  useEffect(() => {
+    if (player) {
+      player.loop = loop;
+    }
+  }, [loop, player]);
+
+  // Subscribe to player events
+  useEffect(() => {
+    if (!player) return;
+
+    const subscriptions: { remove: () => void }[] = [];
+
+    // Status change listener
+    subscriptions.push(
+      player.addListener('statusChange', (status: any) => {
+        if (status.status === 'readyToPlay') {
+          onLoad?.({
+            duration: player.duration,
+            naturalSize: { width: 0, height: 0 }, // expo-video doesn't provide this directly
+          });
+        } else if (status.status === 'error') {
+          onError?.({
+            code: 'EXPO_VIDEO_ERROR',
+            message: status.error?.message || 'Video playback error',
+            details: status.error,
+          });
+        }
+      })
+    );
+
+    // Playing change listener
+    subscriptions.push(
+      player.addListener('playingChange', (data: any) => {
+        onPlayingChange?.(data.isPlaying);
+      })
+    );
+
+    // Time update for progress
+    const progressInterval = setInterval(() => {
+      if (player && player.duration > 0) {
+        onProgress?.({
+          currentTime: player.currentTime,
+          duration: player.duration,
+          bufferedTime: player.currentTime, // expo-video doesn't expose buffered time
+        });
+      }
+    }, 250);
+
+    // Playback ended listener
+    subscriptions.push(
+      player.addListener('playToEnd', () => {
+        onEnd?.();
+      })
+    );
+
+    return () => {
+      subscriptions.forEach((sub) => sub.remove());
+      clearInterval(progressInterval);
+    };
+  }, [player, onLoad, onProgress, onEnd, onError, onPlayingChange]);
+
+  // Map resizeMode to contentFit
+  const getContentFit = () => {
+    switch (resizeMode) {
+      case 'cover':
+        return 'cover';
+      case 'stretch':
+        return 'fill';
+      case 'contain':
+      default:
+        return 'contain';
+    }
+  };
+
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit={getContentFit()}
+      nativeControls={false}
+    />
+  );
+};
+
+// Wrapper component that handles the conditional rendering
+const ExpoVideoPlayerComponent: React.FC<ExpoVideoPlayerProps> = (props) => {
+  // Only render the inner component if expo-video is available
+  if (!useVideoPlayer || !VideoView) {
+    return null;
+  }
+  return <ExpoVideoPlayerInner {...props} />;
+};
 
 // Lazy import VLC player (it might not be installed)
 let VLCPlayer: any = null;
@@ -564,15 +748,61 @@ export const VLCComboPlayer = forwardRef<
     }
 
     if (activeBackend === 'expo-video' && VideoView && useVideoPlayer) {
-      // Using expo-video's VideoView
+      // Using expo-video's VideoView with proper implementation
       return (
-        <View style={[styles.video, videoStyle]}>
-          {/* expo-video implementation would go here */}
-          {/* For now, showing a placeholder since expo-video has different API */}
-          <View style={styles.placeholder}>
-            {/* Video will be rendered by expo-video */}
-          </View>
-        </View>
+        <ExpoVideoPlayerComponent
+          source={source}
+          style={[styles.video, videoStyle]}
+          resizeMode={resizeMode}
+          autoPlay={autoPlay}
+          loop={loop}
+          muted={playerState.isMuted}
+          volume={playerState.volume}
+          playbackSpeed={playerState.playbackSpeed}
+          isPlaying={playerState.isPlaying}
+          playerRef={expoVideoRef}
+          onLoad={(data) => {
+            setDuration(data.duration);
+            setStatus('ready');
+            onLoad?.(data);
+          }}
+          onProgress={(data) => {
+            updateProgress({
+              currentTime: data.currentTime,
+              duration: data.duration,
+              bufferedTime: data.bufferedTime,
+            });
+            onProgress?.({
+              currentTime: data.currentTime,
+              duration: data.duration,
+              bufferedTime: data.bufferedTime,
+              playableDuration: data.duration,
+            });
+          }}
+          onEnd={() => {
+            setStatus('ended');
+            onEnd?.();
+            if (loop) {
+              handleSeek(0);
+              setIsPlaying(true);
+            }
+          }}
+          onError={(error) => {
+            setError({
+              code: error.code || 'EXPO_VIDEO_ERROR',
+              message: error.message || 'Video playback error',
+              details: error,
+            });
+            onError?.({ error });
+          }}
+          onPlayingChange={(isPlaying) => {
+            setIsPlaying(isPlaying);
+            onPlaybackStateChange?.({
+              status: isPlaying ? 'playing' : 'paused',
+              isPlaying,
+            });
+          }}
+        />
       );
     }
 
